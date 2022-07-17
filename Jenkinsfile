@@ -1,39 +1,60 @@
-pipeline {
-    agent none
-        environment {
-        ENV_DOCKER = credentials('dockerhub')
-        DOCKERIMAGE = "dummy/dummy"
-        EKS_CLUSTER_NAME = "demo-cluster"
+pipeline{
+    agent any
+    tools {
+        jdk 'JDK11'
     }
     stages {
-        stage('build') {
-            agent {
-                docker { image 'openjdk:11-jdk' }
-            }
+        stage('clone repo'){
             steps {
-                sh 'chmod +x gradlew && ./gradlew build jacocoTestReport'
+                git 'https://github.com/MohamedB-01/my--Gradle-Sample'
+            }
+    }
+     stage('SonarQube analysis') {
+         steps{
+             script{
+                       def scannerHome = tool 'sonarQube';
+
+                       withSonarQubeEnv('sonarCloud') { // Will pick the global server connection you have configured
+                       bat "${scannerHome}/bin/sonar-scanner"
+                    }
+             }
+         }
+     }
+
+
+        stage ('Build project'){
+            steps {
+                bat 'gradle clean build'
+            }
+
+        }
+
+         stage('Build docker image'){
+            steps {
+                script {
+                    dockerImage = docker.build("mbdocker001/coglab:${env.BUILD_NUMBER}")
+                }
+
             }
         }
-        stage('sonarqube') {
-        agent {
-            docker { image '<some sonarcli image>' } }
+
+         stage('Build docker deploy'){
             steps {
-                sh 'echo scanning!'
-            }
-        }
-        stage('docker build') {
-            steps {
-                sh 'echo docker build'
-            }
-        }
-        stage('docker push') {
-            steps {
-                sh 'echo docker push!'
+                script {
+                     def dockerImageTag= "mbdocker001/project1:${env.BUILD_NUMBER}"
+                     echo "Docker Image Tag name : ${dockerImageTag}"
+                     docker.withRegistry('https://registry.hub.docker.com','docker_hub_credentials'){
+                         dockerImage.push("${env.BUILD_NUMBER}")
+                         dockerImage.push('latest')
+                    }
                 }
             }
-        stage('Deploy App') {
+        }
+
+        stage('Deploy to Kubernetes'){
             steps {
-                sh 'echo deploy to kubernetes'               
+                kubernetesDeploy(configs: "kubernetes.yml", kubeconfigId: "kubernetes", enableConfigSubstitution: true)
             }
+        }
     }
 }
