@@ -1,7 +1,7 @@
 pipeline{
     agent any
     tools {
-        jdk 'JDK9.0.4'
+        jdk 'JDK11'
     }
     stages {
         stage('clone repo'){
