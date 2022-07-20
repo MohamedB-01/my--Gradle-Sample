@@ -1,7 +1,7 @@
 pipeline{
     agent any
     tools {
-        jdk 'JDK11'
+        jdk 'JDK9.0.4'
     }
     stages {
         stage('clone repo'){
@@ -15,7 +15,7 @@ pipeline{
                        def scannerHome = tool 'sonarQube';
 
                        withSonarQubeEnv('sonarCloud') { // Will pick the global server connection you have configured
-                       bat "${scannerHome}/bin/sonar-scanner"
+                       sh "${scannerHome}/bin/sonar-scanner"
                     }
              }
          }
@@ -24,7 +24,7 @@ pipeline{
 
         stage ('Build project'){
             steps {
-                bat 'gradle clean build'
+                sh 'gradle clean build'
             }
 
         }
