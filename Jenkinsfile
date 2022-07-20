@@ -24,7 +24,8 @@ pipeline{
 
         stage ('Build project'){
             steps {
-                sh 'gradle clean build'
+//                 sh 'gradle clean build'
+                sh 'chmod +x gradlew && ./gradlew build jacocoTestReport'
             }
 
         }
