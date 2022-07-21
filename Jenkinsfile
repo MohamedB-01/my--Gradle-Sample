@@ -33,7 +33,7 @@ pipeline{
          stage('Build docker image'){
             steps {
                 script {
-                    dockerImage = docker.build("mbdocker001/coglab:${env.BUILD_NUMBER}")
+                    dockerImage = docker.build("mbdocker001/lab:${env.BUILD_NUMBER}")
                 }
 
             }
@@ -42,8 +42,8 @@ pipeline{
          stage('Build docker deploy'){
             steps {
                 script {
-                     def dockerImageTag= "mbdocker001/project1:${env.BUILD_NUMBER}"
-                     echo "Docker Image Tag name : ${dockerImageTag}"
+
+
                      docker.withRegistry('https://registry.hub.docker.com','docker_hub_credentials'){
                          dockerImage.push("${env.BUILD_NUMBER}")
                          dockerImage.push('latest')
