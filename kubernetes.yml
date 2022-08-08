@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: springboot-sample
-          image: mbdocker001/coglab:latest
+          image: mbdocker001/sample-spring-boot:latest
           ports:
             - containerPort: 5000
 ---
