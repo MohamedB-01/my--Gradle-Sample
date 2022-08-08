@@ -9,7 +9,7 @@ pipeline {
     }
     stages {
         stage('build') {
-            agent label {
+            agent  {
                 docker { image 'openjdk:11-jdk' }
             }
             steps {
@@ -18,7 +18,7 @@ pipeline {
             }
         }
         stage('sonarqube') {
-            agent label {
+            agent  {
                 docker { image 'sonarsource/sonar-scanner-cli:latest' }
             }
             steps {
@@ -51,7 +51,7 @@ pipeline {
             }
         }
         stage('Deploy App') {
-            agent label {
+            agent  {
                 docker {
                     image 'jshimko/kube-tools-aws:3.8.1'
                     args '-u root --privileged'
