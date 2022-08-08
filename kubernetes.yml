@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: sample-spring-boot
+  namespace: mohamed-bassiouni
 spec:
   replicas: 1 # 1 PODs at any given point of time
   selector:
@@ -22,6 +23,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: sample-spring-boot-service
+  namespace: mohamed-bassiouni
   labels:
     name: sample-spring-boot
 spec:
