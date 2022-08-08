@@ -1,60 +1,70 @@
-pipeline{
-    agent any
-    tools {
-        jdk 'JDK11'
+pipeline {
+    agent none
+    environment {
+        ENV_DOCKER = credentials('dockerhub')
+        DOCKERIMAGE = "sample-spring-boot"
+        EKS_CLUSTER_NAME = "demo-cluster"
+        SONAR_TOKEN = credentials('sonar-token')
+        image = ''
     }
     stages {
-        stage('clone repo'){
-            steps {
-                git 'https://github.com/MohamedB-01/my--Gradle-Sample'
+        stage('build') {
+            agent {
+                docker { image 'openjdk:11-jdk' }
             }
-    }
-     stage('SonarQube analysis') {
-         steps{
-             script{
-                       def scannerHome = tool 'sonarQube';
-
-                       withSonarQubeEnv('sonarCloud') { // Will pick the global server connection you have configured
-                       sh "${scannerHome}/bin/sonar-scanner"
-                    }
-             }
-         }
-     }
-
-
-        stage ('Build project'){
             steps {
-//                 sh 'gradle clean build'
                 sh 'chmod +x gradlew && ./gradlew build jacocoTestReport'
+                stash includes: 'build/**/*', name: 'build'
             }
-
         }
-
-         stage('Build docker image'){
+        stage('sonarqube') {
+            agent {
+                docker { image 'sonarsource/sonar-scanner-cli:latest' }
+            }
             steps {
+                unstash 'build'
+                sh 'sonar-scanner'
+            }
+        }
+        stage('docker build') {
+            agent any
+            steps {
+                echo 'Starting to build docker image'
+                unstash 'build'
+
                 script {
-                    dockerImage = docker.build("mbdocker001/lab:${env.BUILD_NUMBER}")
+                    image = docker.build("$ENV_DOCKER_USR/$DOCKERIMAGE")
                 }
-
             }
         }
-
-         stage('Build docker deploy'){
+        stage('docker push') {
+            agent any
             steps {
+                echo 'Pushing image to registry'
+
                 script {
-
-
-                     docker.withRegistry('https://registry.hub.docker.com','docker_hub_credentials'){
-                         dockerImage.push("${env.BUILD_NUMBER}")
-                         dockerImage.push('latest')
+                    docker.withRegistry('', 'dockerhub') {
+                        image.push("$BUILD_ID")
+                        image.push('latest')
                     }
                 }
             }
         }
-
-        stage('Deploy to Kubernetes'){
+        stage('Deploy App') {
+            agent {
+                docker {
+                    image 'jshimko/kube-tools-aws:3.8.1'
+                    args '-u root --privileged'
+                }
+            }
             steps {
-                kubernetesDeploy(configs: "kubernetes.yml", kubeconfigId: "kubernetes", enableConfigSubstitution: true)
+                echo 'Deploying to kubernetes'
+
+                withAWS(credentials:'aws-credentials') {
+                    sh 'aws eks update-kubeconfig --name sre-lab-cluster-1'
+                    sh 'chmod +x deployment-status.sh && ./deployment-status.sh'
+                    sh "kubectl set image deployment sample-spring-boot -n mohamed-bassiouni springboot-sample=$ENV_DOCKER_USR/$DOCKERIMAGE:$BUILD_ID"
+                }
             }
         }
     }
